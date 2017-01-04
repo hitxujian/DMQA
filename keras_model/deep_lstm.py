@@ -70,10 +70,14 @@ class DeepLSTM():
                       loss='categorical_crossentropy',
                       metrics=['accuracy'])
 
-  def train(self, X, Y, dev_X, dev_Y, nb_epoch=1000, batch_size=3):
-    csv_logger = CSVLogger('training.log')
-    checkpointer = ModelCheckpoint(filepath="weights.hdf5", verbose=1, save_best_only=True)
-    tb = TensorBoard(log_dir='logs', histogram_freq=0, write_graph=True, write_images=False)
+  def train(self, train_set, dev_set, nb_epoch=1000, batch_size=3, model_dir=''):
+    # prepare callbacks
+    csv_logger = CSVLogger(os.path.join(model_dir, 'training.log'))
+    checkpointer = ModelCheckpoint(filepath=os.path.join(model_dir, "weights.hdf5"), verbose=1, save_best_only=True)
+    tb = TensorBoard(log_dir=os.path.join(model_dir, 'logs'), histogram_freq=0, write_graph=True, write_images=False)
+    # prepare data
+    X, Y, _ = self.get_input(train_set)
+    dev_X, dev_Y, _ = self.get_input(dev_set)
     self.model.fit(X, Y, batch_size=batch_size, nb_epoch=nb_epoch, validation_data=(dev_X, dev_Y), callbacks=[csv_logger, checkpointer, tb])
       
   def get_input(self, data, train=True):
