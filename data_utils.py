@@ -28,6 +28,7 @@ import random
 from tqdm import *
 from glob import glob
 from collections import defaultdict
+import cPickle
 
 from tensorflow.python.platform import gfile
 
@@ -63,19 +64,23 @@ def dmqa_file_reader(dfile):
 def load_dataset(data_dir, dataset_name, vocab_size, max_nsteps, part="training"):
   data = []
   data_path = os.path.join(data_dir, dataset_name, "questions", part)
-  print("Load data from %s" %(data_path))
-  for fname in tqdm(glob(os.path.join(data_path, "*.question.ids%s" % (vocab_size)))):
-    try:
-      tokens = dmqa_file_reader(fname)
-      # check max_nsteps
-      d = [int(t) for t in tokens[1].strip().split(' ')]
-      q = [int(t) for t in tokens[2].strip().split(' ')]
-      a = [int(tokens[3])]
-      if len(d) + len(q) < max_nsteps:
-        data.append((d,q,a))
-    except Exception as e:
-      print(" [!] Error occured for %s: %s" % (fname, e))
-      
+  readed_data_path = os.path.join(data_dir, dataset_name, "%s_v%d_mn%d.pkl")
+  if os.path.exists(readed_data_path):
+    data = cPickle.load(open(readed_data_path))
+  else:
+    print("Load data from %s" %(data_path))
+    for fname in tqdm(glob(os.path.join(data_path, "*.question.ids%s" % (vocab_size)))):
+      try:
+        tokens = dmqa_file_reader(fname)
+        # check max_nsteps
+        d = [int(t) for t in tokens[1].strip().split(' ')]
+        q = [int(t) for t in tokens[2].strip().split(' ')]
+        a = [int(tokens[3])]
+        if len(d) + len(q) < max_nsteps:
+          data.append((d,q,a))
+      except Exception as e:
+        print(" [!] Error occured for %s: %s" % (fname, e))
+    cPickle.dump(data, open(readed_data_path, 'w'))
   return data
 
 def batch_iter(data, batch_size, num_epochs, shuffle=True):
