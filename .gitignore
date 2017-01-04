@@ -1,2 +1,6 @@
 *.pyc
 *.bk
+logs
+*.log
+*.hdf5
+
