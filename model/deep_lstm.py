@@ -84,14 +84,14 @@ class DeepLSTM():
   def batch_train(self, train_set, dev_set, nb_epoch=1000, batch_size=3, model_dir='',
                   evaluate_every=100, checkpoint_every=1000):
 
-    logger = open(os.path.join(model_dir, 'training.log'))
+    logger = open(os.path.join(model_dir, 'training.log'), 'w')
     checkpoint_dir = os.path.join(model_dir, 'checkpoints')
     if not os.path.exists(checkpoint_dir):
       os.makedirs(checkpoint_dir)
 
     dev_X, dev_Y, _ = self.get_input(dev_set)
     step=0
-    for train_data in data_utils.batch_iter(batch_size, nb_epoch):
+    for train_data in data_utils.batch_iter(train_set, batch_size, nb_epoch):
       X, Y, _ = self.get_input(train_data)
       results = self.model.test_on_batch(X, Y)
       str_results = ', '.join(["%s: %.4f" %(k, v) for (k,v) in zip(self.model.metrics_names, results)])
@@ -165,6 +165,7 @@ def main():
   print(model.model.predict(xs))
   model.train(xs, ys, xs, ys)
   #model.model.fit(xs, ys, nb_epoch=1000, batch_size=3)
+  model.batch_train(data, data, nb_epoch=600, batch_size=3, model_dir='toy_model')
   output = model.model.predict(xs)
   print(output)
 
