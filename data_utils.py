@@ -66,6 +66,7 @@ def load_dataset(data_dir, dataset_name, vocab_size, max_nsteps, part="training"
   data_path = os.path.join(data_dir, dataset_name, "questions", part)
   readed_data_path = os.path.join(data_dir, dataset_name, "%s_v%d_mn%d.pkl")
   if os.path.exists(readed_data_path):
+    print("Load data from %s" %(readed_data_path))
     data = cPickle.load(open(readed_data_path))
   else:
     print("Load data from %s" %(data_path))
@@ -80,6 +81,7 @@ def load_dataset(data_dir, dataset_name, vocab_size, max_nsteps, part="training"
           data.append((d,q,a))
       except Exception as e:
         print(" [!] Error occured for %s: %s" % (fname, e))
+    print("Save data to %s" %(readed_data_path))
     cPickle.dump(data, open(readed_data_path, 'w'))
   return data
 

@@ -1,6 +1,6 @@
 # coding=utf-8
 from keras.models import Model
-from keras.layers import Input, Dense, LSTM, Embedding, merge, Lambda
+from keras.layers import *
 from keras.preprocessing.sequence import pad_sequences
 from keras.callbacks import *
 from keras import backend as K
@@ -18,6 +18,11 @@ import data_utils
 def reverse_seq(X):
   return X[:,::-1,:]
 
+def get_R(X):
+    Y, alpha = X[0], X[1]
+    ans = K.batch_dot(Y, K.expand_dims(alpha, dim=-1))
+    return ans
+
 
 class Attentive():
   """Deep LSTM model."""
@@ -29,14 +34,15 @@ class Attentive():
     """Initialize the parameters for an Attentive model.
     
     Args:
-      size: int, The dimensionality of the inputs into the Deep LSTM cell [32, 64, 256]
+      size: int, The dimensionality of the inputs into the LSTM cell [32, 64, 256]
       learning_rate: float, [1e-3, 5e-4, 1e-4, 5e-5]
       batch_size: int, The size of a batch [16, 32]
       keep_prob: unit Tensor or float between 0 and 1 [0.0, 0.1, 0.2]
-      max_nsteps: int, The max time unit [1000]
-      qca: if true: the input is q+d, else: the input is d+q
+      max_dsteps: int, The max time unit of document [1000]
+      max_qsteps: int, The max time unit of query [1000]
     """
     self.size = int(size)
+    self.hidden_size = 2 * self.size
     self.vocab_size = int(vocab_size)
     #self.batch_size = int(batch_size)
     self.max_dsteps = int(max_dsteps)
@@ -62,26 +68,48 @@ class Attentive():
     lstm_fwd_d = LSTM(self.size, return_sequences=True, name='lstm_fwd_d')(emb_input_d)
     lstm_bwd_d = LSTM(self.size, return_sequences=True, go_backwards=True, name='lstm_bwd_d')(emb_input_d)
     lstm_bwd_d = Lambda(reverse_seq)(lstm_bwd_d)
-    bi_lstm_d = merge([lstm_fwd_d, lstm_bwd_d], name='bilstm_d', mode='concat')
+    y = merge([lstm_fwd_d, lstm_bwd_d], name='bilstm_d', mode='concat')
 
     lstm_fwd_q = LSTM(self.size, name='lstm_fwd_q')(emb_input_q)
     lstm_bwd_q = LSTM(self.size, go_backwards=True, name='lstm_bwd_q')(emb_input_q)
     u = merge([lstm_fwd_q, lstm_bwd_q], name='bilstm_q', mode='concat')
 
     # Attention
+    Wum = Dense(self.hidden_size, bias=False, name="Wum")(u)
+    Wum = RepeatVector(self.max_dsteps, name="Wum_n")(Wum)
+    Wym = TimeDistributed(Dense(self.hidden_size, bias=False), name="Wym")(y)
+    m_ = merge([Wum, Wym], mode='sum')
+    m = Activation('tanh', name='m')(m_)
+    alpha_ = TimeDistributed(Dense(1), name="alpha_")(m)
+    flat_alpha = Flatten(name="flat_alpha")(alpha_)
+    alpha = Activation('softmax', name='alpha')(flat_alpha)
+    #alpha = K.expand_dims(alpha, dim=-1)
+    y_trans = Permute((2, 1), name="y_trans")(y)
+
+    r_ = merge([y_trans, alpha], output_shape=(self.hidden_size, 1), name="r_", mode=get_R)
+    r = Flatten(name="flat_r")(r_)
+ 
+    Wug = Dense(self.hidden_size, bias=False, name="Wug")(u)
+    Wrg = Dense(self.hidden_size, bias=False, name="Wrg")(r)
+    g_ = merge([Wrg, Wug], mode='sum')
+    g = Activation('tanh', name='g')(g_)
+
+    self.y = Dense(self.vocab_size, activation='softmax')(g)
     
-    
-    self.model = Model(input=[self.input_d, self.input_q], output=bi_lstm_d)
+    self.model = Model(input=[self.input_d, self.input_q], output=self.y)
     
     self.model.compile(optimizer='rmsprop',
                       loss='categorical_crossentropy',
                       metrics=['accuracy'])
 
-  def train(self, X, Y, dev_X, dev_Y, nb_epoch=1000, batch_size=3):
+  def train(self, train_set, dev_set, nb_epoch=1000, batch_size=3):
     csv_logger = CSVLogger('training.log')
     checkpointer = ModelCheckpoint(filepath="weights.hdf5", verbose=1, save_best_only=True)
     tb = TensorBoard(log_dir='logs', histogram_freq=0, write_graph=True, write_images=False)
-    self.model.fit(X, Y, batch_size=batch_size, nb_epoch=nb_epoch, validation_data=(dev_X, dev_Y), callbacks=[csv_logger, checkpointer, tb])
+
+    D,Q,Y,_ = self.get_input(train_set)
+    dD,dQ,dY,_ = self.get_input(dev_set)
+    self.model.fit([D,Q], Y, batch_size=batch_size, nb_epoch=nb_epoch, validation_data=([dD,dQ], dY), callbacks=[csv_logger, checkpointer, tb])
       
   def get_input(self, data, train=True):
     '''
@@ -134,7 +162,7 @@ def main():
   print(qs)
   print(ys)
   print(model.model.predict([ds, qs]))
-  #model.train(xs, ys, xs, ys)
+  model.train(data, data)
   #model.model.fit(xs, ys, nb_epoch=1000, batch_size=3)
   #output = model.model.predict(xs)
   #print(output)
