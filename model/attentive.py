@@ -24,7 +24,7 @@ def get_R(X):
     return ans
 
 
-class Attentive():
+class AttentiveReader():
   """Deep LSTM model."""
   def __init__(self,
                size=256,
@@ -111,6 +111,37 @@ class Attentive():
     dD,dQ,dY,_ = self.get_input(dev_set)
     self.model.fit([D,Q], Y, batch_size=batch_size, nb_epoch=nb_epoch, validation_data=([dD,dQ], dY), callbacks=[csv_logger, checkpointer, tb])
       
+  
+  def batch_train(self, train_set, dev_set, nb_epoch=1000, batch_size=3, model_dir='',
+                  evaluate_every=100, checkpoint_every=1000):
+
+    logger = open(os.path.join(model_dir, 'training.log'), 'w')
+    checkpoint_dir = os.path.join(model_dir, 'checkpoints')
+    if not os.path.exists(checkpoint_dir):
+      os.makedirs(checkpoint_dir)
+
+    dD,dQ,dY,_ = self.get_input(dev_set)
+    step=0
+    for train_data in data_utils.batch_iter(train_set, batch_size, nb_epoch):
+      D,Q,Y,_ = self.get_input(train_set)
+      results = self.model.test_on_batch([D, Q], Y)
+      str_results = ', '.join(["%s: %.4f" %(k, v) for (k,v) in zip(self.model.metrics_names, results)])
+      print("Step: %d, %s" %(step, str_results))
+      logger.write("Step: %d, %s\n" %(step, str_results))
+      self.model.train_on_batch([D, Q],Y)
+      step += 1
+      if step % evaluate_every == 0:
+        dev_results = self.model.test_on_batch([dD,dQ], dY)
+        str_dev_results = ', '.join(["%s: %.4f" %(k, v) for (k,v) in zip(self.model.metrics_names, dev_results)])
+        print("Evaluate at dev set: %s" %(str_dev_results))
+        logger.write("Evaluate at dev set: %s" %(str_dev_results))
+
+      if step % checkpoint_every == 0:
+        checkpoint_path = os.path.join(checkpoint_dir, "checkpoint%d.hdf5" %(step))
+        print("Save model to %s" %(checkpoint_path))
+        self.model.save(checkpoint_path)
+    logger.close()
+
   def get_input(self, data, train=True):
     '''
     convert data to tensorflow input

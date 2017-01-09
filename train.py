@@ -27,7 +27,8 @@ flags.DEFINE_string("model_dir", "", "Directory name to save the model (summarie
 FLAGS = flags.FLAGS
 
 model_dict = {
-  'LSTM': DeepLSTM
+  'LSTM': DeepLSTM,
+  'Attentive': AttentiveReader,
 }
 '''
 model_dict = {
