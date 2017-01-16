@@ -90,7 +90,7 @@ class DeepLSTM():
       os.makedirs(checkpoint_dir)
 
     dev_X, dev_Y, _ = self.get_input(dev_set)
-    step=0
+    step=1
     for train_data in data_utils.batch_iter(train_set, batch_size, nb_epoch):
       X, Y, _ = self.get_input(train_data)
       results = self.model.test_on_batch(X, Y)
@@ -98,17 +98,19 @@ class DeepLSTM():
       print("Step: %d, %s" %(step, str_results))
       logger.write("Step: %d, %s\n" %(step, str_results))
       self.model.train_on_batch(X,Y)
-      step += 1
       if step % evaluate_every == 0:
         dev_results = self.model.test_on_batch(dev_X, dev_Y)
         str_dev_results = ', '.join(["%s: %.4f" %(k, v) for (k,v) in zip(self.model.metrics_names, dev_results)])
         print("Evaluate at dev set: %s" %(str_dev_results))
-        logger.write("Evaluate at dev set: %s" %(str_dev_results))
+        logger.write("Evaluate at dev set: %s\n" %(str_dev_results))
 
       if step % checkpoint_every == 0:
         checkpoint_path = os.path.join(checkpoint_dir, "checkpoint%d.hdf5" %(step))
         print("Save model to %s" %(checkpoint_path))
         self.model.save(checkpoint_path)
+
+      step += 1
+
     logger.close()
 
       
