@@ -64,7 +64,7 @@ def dmqa_file_reader(dfile):
 def load_dataset(data_dir, dataset_name, vocab_size, max_nsteps, part="training"):
   data = []
   data_path = os.path.join(data_dir, dataset_name, "questions", part)
-  readed_data_path = os.path.join(data_dir, dataset_name, "%s_v%d_mn%d.pkl")
+  readed_data_path = os.path.join(data_dir, dataset_name, "%s_v%d_mn%d.pkl" %(part, vocab_size, max_nsteps))
   if os.path.exists(readed_data_path):
     print("Load data from %s" %(readed_data_path))
     data = cPickle.load(open(readed_data_path))

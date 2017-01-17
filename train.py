@@ -68,6 +68,6 @@ def main(_):
 
   #model.train(train_data, dev_data, nb_epoch=FLAGS.epoch, batch_size=FLAGS.batch_size, model_dir=FLAGS.model_dir)
   model.batch_train(train_data, dev_data, nb_epoch=FLAGS.epoch, batch_size=FLAGS.batch_size, model_dir=FLAGS.model_dir,
-  					evaluate_every=FLAGS.evaluate_every, checkpoint_every=FLAGS.checkpoint_every)
+                    evaluate_every=FLAGS.evaluate_every, checkpoint_every=FLAGS.checkpoint_every)
 if __name__ == '__main__':
   tf.app.run()
