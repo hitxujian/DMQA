@@ -123,7 +123,7 @@ class AttentiveReader():
     dD,dQ,dY,_ = self.get_input(dev_set)
     step=1
     for train_data in data_utils.batch_iter(train_set, batch_size, nb_epoch):
-      D,Q,Y,_ = self.get_input(train_set)
+      D,Q,Y,_ = self.get_input(train_data)
       results = self.model.test_on_batch([D, Q], Y)
       str_results = ', '.join(["%s: %.4f" %(k, v) for (k,v) in zip(self.model.metrics_names, results)])
       print("Step: %d, %s" %(step, str_results))
