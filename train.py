@@ -24,6 +24,9 @@ flags.DEFINE_string("data_dir", "data", "The name of data directory [data]")
 flags.DEFINE_string("dataset", "cnn", "The name of dataset [cnn, dailymail]")
 flags.DEFINE_string("model_dir", "", "Directory name to save the model (summaries and checkpoints)")
 
+tf.flags.DEFINE_integer("evaluate_every", 100, "Evaluate model on dev set after this many steps (default: 100)")
+tf.flags.DEFINE_integer("checkpoint_every", 1000, "Save model after this many steps (default: 1000)")
+
 FLAGS = flags.FLAGS
 
 model_dict = {
@@ -63,6 +66,8 @@ def main(_):
   dev_data = data_utils.load_dataset(FLAGS.data_dir, FLAGS.dataset, FLAGS.vocab_size, FLAGS.max_nsteps, part="validation")
   print(" [+] Finish loading. Train set: %d, Dev set: %d" %(len(train_data), len(dev_data)))
 
-  model.train(train_data, dev_data, nb_epoch=FLAGS.epoch, batch_size=FLAGS.batch_size, model_dir=FLAGS.model_dir)
+  #model.train(train_data, dev_data, nb_epoch=FLAGS.epoch, batch_size=FLAGS.batch_size, model_dir=FLAGS.model_dir)
+  model.batch_train(train_data, dev_data, nb_epoch=FLAGS.epoch, batch_size=FLAGS.batch_size, model_dir=FLAGS.model_dir,
+  					evaluate_every=FLAGS.evaluate_every, checkpoint_every=FLAGS.checkpoint_every)
 if __name__ == '__main__':
   tf.app.run()
