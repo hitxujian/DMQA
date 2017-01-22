@@ -14,6 +14,7 @@ flags.DEFINE_integer("epoch", 25, "Epoch to train [25]")
 flags.DEFINE_integer("vocab_size", 100000, "The size of vocabulary [10000]")
 flags.DEFINE_integer("batch_size", 32, "The size of batch images [32]")
 flags.DEFINE_integer("cell_size", 256, "The cell size of  rnn [256]")
+flags.DEFINE_string("cell", "GRU", "The type of RNN cell [LSTM, GRU]")
 flags.DEFINE_integer("max_nsteps", 1000, "Max nsteps for rnn [1000]")
 flags.DEFINE_float("learning_rate", 1e-4, "Learning rate [0.0001]")
 flags.DEFINE_float("momentum", 0.9, "Momentum of RMSProp [0.9]")
@@ -59,7 +60,7 @@ def main(_):
     config_file.write("%s" %(pp.pformat(flags.FLAGS.__flags)))
 
   # build model
-  model = model_dict[FLAGS.model](vocab_size = FLAGS.vocab_size, size=FLAGS.cell_size)
+  model = model_dict[FLAGS.model](vocab_size = FLAGS.vocab_size, size=FLAGS.cell_size, cell_type=FLAGS.cell)
   # load data
   print(" [*] Loading dataset...")
   train_data = data_utils.load_dataset(FLAGS.data_dir, FLAGS.dataset, FLAGS.vocab_size, FLAGS.max_nsteps, part="training")

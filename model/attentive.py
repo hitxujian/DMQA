@@ -30,7 +30,8 @@ class AttentiveReader():
                size=256,
                vocab_size=100000,
                max_dsteps=1000,
-               max_qsteps=100):
+               max_qsteps=100,
+               cell_type='GRU'):
     """Initialize the parameters for an Attentive model.
     
     Args:
@@ -52,6 +53,14 @@ class AttentiveReader():
     self.input_d = Input(shape=(self.max_dsteps,))
     self.input_q = Input(shape=(self.max_qsteps,))
 
+
+    if cell_type == 'LSTM':
+      cell = LSTM
+    elif cell_type == 'GRU':
+      cell = GRU
+    else:
+      raise Exception("Unknown cell type")
+
     print(" [*] Building Attentive Model...")
     
     # embedding
@@ -59,19 +68,19 @@ class AttentiveReader():
     emb_input_d = Embedding_layer(self.input_d)
     emb_input_q = Embedding_layer(self.input_q)
 
-    lstm = LSTM(self.size, return_sequences=True, go_backwards=True)
+    lstm = cell(self.size, return_sequences=True, go_backwards=True)
     lstm_q = lstm(emb_input_q)
     lstm_q = Lambda(reverse_seq)(lstm_q)
 
-    # Bi LSTM
+    # Bi RNN
     
-    lstm_fwd_d = LSTM(self.size, return_sequences=True, name='lstm_fwd_d')(emb_input_d)
-    lstm_bwd_d = LSTM(self.size, return_sequences=True, go_backwards=True, name='lstm_bwd_d')(emb_input_d)
+    lstm_fwd_d = cell(self.size, return_sequences=True, name='lstm_fwd_d')(emb_input_d)
+    lstm_bwd_d = cell(self.size, return_sequences=True, go_backwards=True, name='lstm_bwd_d')(emb_input_d)
     lstm_bwd_d = Lambda(reverse_seq)(lstm_bwd_d)
     y = merge([lstm_fwd_d, lstm_bwd_d], name='bilstm_d', mode='concat')
 
-    lstm_fwd_q = LSTM(self.size, name='lstm_fwd_q')(emb_input_q)
-    lstm_bwd_q = LSTM(self.size, go_backwards=True, name='lstm_bwd_q')(emb_input_q)
+    lstm_fwd_q = cell(self.size, name='lstm_fwd_q')(emb_input_q)
+    lstm_bwd_q = cell(self.size, go_backwards=True, name='lstm_bwd_q')(emb_input_q)
     u = merge([lstm_fwd_q, lstm_bwd_q], name='bilstm_q', mode='concat')
 
     # Attention
@@ -86,7 +95,7 @@ class AttentiveReader():
     #alpha = K.expand_dims(alpha, dim=-1)
     y_trans = Permute((2, 1), name="y_trans")(y)
 
-    r_ = merge([y_trans, alpha], output_shape=(self.hidden_size, 1), name="r_", mode=get_R)
+    r_ = merge([y_trans, alpha], output_shape=(2 * self.size, 1), name="r_", mode=get_R)
     r = Flatten(name="flat_r")(r_)
  
     Wug = Dense(self.hidden_size, bias=False, name="Wug")(u)
@@ -185,10 +194,11 @@ def main():
     ([2,3,4,5,6,7], [5,4,3], [7]),
     ([9,8,7,6,5,4,3], [3,5,8], [9])
   ]
-  model = Attentive(size=4,
+  model = AttentiveReader(size=4,
                   vocab_size=10,
                   max_dsteps=10,
-                  max_qsteps=3)
+                  max_qsteps=3,
+                  cell_type='GRU')
 
   ds, qs, ys, ms = model.get_input(data)
   print(ds)
